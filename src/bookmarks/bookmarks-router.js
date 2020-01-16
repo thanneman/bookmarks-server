@@ -2,15 +2,23 @@ const express = require('express')
 const uuid = require('uuid/v4')
 const logger = require('../logger')
 const store = require('../store')
+const BookmarksService = require('./bookmarks-service')
 
 const bookmarksRouter = express.Router()
 const bodyParser = express.json()
 
 bookmarksRouter
     .route('/bookmarks')
-    .get((req, res) => {
-        res.json(store.bookmarks)
+    .get((req, res, next) => {
+        const knexInstance = req.app.get('db')
+        BookmarksService.getAllBookmarks(knexInstance)
+            .then(bookmarks => {
+                res.json(bookmarks)
+            })
+            .catch(next)
     })
+
+    /*
     .post(bodyParser, (req, res) => {
         const { title, url, description, rating } = req.body;
 
@@ -58,21 +66,27 @@ bookmarksRouter
             .location(`http://localhost:8000/bookmarks/${bookmark.id}`)
             .json(bookmark)
     })
+    */
 
 bookmarksRouter
     .route('/bookmarks/:bookmark_id')
-    .get((req, res) => {
+    .get((req, res, next) => {
+        const knexInstance = req.app.get('db')
         const { bookmark_id } = req.params
-        const bookmark = store.bookmarks.find(c => c.id == bookmark_id)
-        if (!bookmark) {
-            logger.error(`Bookmark with id ${bookmark_id} not found.`)
-            return res
-                .status(404)
-                .send('Bookmark Not Found')
-            }
-        
-            res.json(bookmark)
+        BookmarksService.getById(knexInstance, bookmark_id)
+            .then(bookmark => {
+                if (!bookmark) {
+                    logger.error(`Bookmark with id ${bookmark_id} not found.`)
+                    return res.status(404).json({
+                        error: { message: `Bookmark doesn't exist` }
+                    })
+                }
+                res.json(bookmark)
+            })
+            .catch(next)
     })
+
+    /*
     .delete((req, res) => {
         const { bookmark_id } = req.params
     
@@ -92,6 +106,7 @@ bookmarksRouter
           .status(204)
           .end()
       })
+      */
 
 
     module.exports = bookmarksRouter
