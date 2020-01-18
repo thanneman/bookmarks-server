@@ -18,43 +18,33 @@ bookmarksRouter
             .catch(next)
     })
 
-    /*
-    .post(bodyParser, (req, res) => {
+    .post(bodyParser, (req, res, next) => {
         const { title, url, description, rating } = req.body;
+        const newBookmark = { title, url, description, rating }
 
-        //check for title
-        if(!title) {
-            logger.error(`Title is required`);
-            return res
-                .status(400)
-                .send('Invalid data');
-        }
+        for (const [key, value] of Object.entries(newBookmark)) {
+            if (value == null)
+                logger.error(`${key} is required`)
+                return res.status(400).json({
+                    error: { message: `Missing ${key} in request body`}
+                })
+            }
 
-        //check for url
-        if(!url) {
-            logger.error(`URL is required`);
-            return res
-                .status(400)
-                .send('Invalid data');
-        }
+        
+        BookmarksService.insertBookmark(
+            req.app.get('db'),
+            newBookmark
+        )
+            .then(bookmark => {
+                logger.info(`Bookmark with id ${bookmark.id} created`)
+                res
+                    .status(201)
+                    .location(`/bookmarks/${bookmark.id}`)
+                    .json(bookmark)
+            })
+            .catch(next)
 
-        //check for description
-        if(!description) {
-            logger.error(`Description is required`);
-            return res
-                .status(400)
-                .send('Invalid data');
-        }
-
-        //check for rating
-        if(!rating) {
-            logger.error(`Rating is required`);
-            return res
-                .status(400)
-                .send('Invalid data');
-        }
-
-        //create an id
+        /* OLD POST CODE
         const id = uuid();
         const bookmark = { id, title, url, description, rating }
 
@@ -65,12 +55,12 @@ bookmarksRouter
             .status(201)
             .location(`http://localhost:8000/bookmarks/${bookmark.id}`)
             .json(bookmark)
+        */
     })
-    */
 
 bookmarksRouter
     .route('/bookmarks/:bookmark_id')
-    .get((req, res, next) => {
+    .all((req, res, next) => {
         const knexInstance = req.app.get('db')
         const { bookmark_id } = req.params
         BookmarksService.getById(knexInstance, bookmark_id)
@@ -81,7 +71,21 @@ bookmarksRouter
                         error: { message: `Bookmark doesn't exist` }
                     })
                 }
-                res.json(bookmark)
+                res.bookmark = bookmark // save bookmark for next middleware
+                next()  // call next so the next middleware happens
+            })
+            .catch(next)
+    })
+    .get((req, res) => {
+        res.json(bookmark)
+    })
+    .delete((req, res, next) => {
+        BookmarksService.deleteBookmark(
+            req.app.get('db'),
+            req.params.bookmark_id
+        )
+            .then(() => {
+                res.status(204).end()
             })
             .catch(next)
     })
