@@ -17,6 +17,7 @@ app.use(morgan(morganOption))
 app.use(helmet())
 app.use(cors())
 
+/*
 app.use(function validateBearerToken(req, res, next) {
     const apiToken = process.env.API_TOKEN
     const authToken = req.get('Authorization')
@@ -26,7 +27,7 @@ app.use(function validateBearerToken(req, res, next) {
         return res.status(401).json({ error: 'Unauthorized request' })
     }
     next()
-})
+})*/
 
 app.use('/api/bookmarks', bookmarksRouter)
 
